@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="de" data-style-preset="twenty-minutes">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>GoPilot Rechner</title>
+  <link rel="stylesheet" href="calculator.css">
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <h1 id="calculator-title">Rabatt-Rechner</h1>
+      <div class="tabs" role="tablist" aria-label="Rechner">
+        <button class="tab active" type="button" data-tab="rabatt">Rabatt</button>
+        <button class="tab" type="button" data-tab="hosting">Hosting</button>
+        <button class="tab" type="button" data-tab="verteilung">Verteilung</button>
+      </div>
+    </header>
+
+    <section class="panel active" id="panel-rabatt" aria-label="Rabatt-Rechner">
+      <div class="section-title">Preise eingeben</div>
+      <div class="price-grid">
+        <div class="field lockable-field" data-rabatt-field="brutto">
+          <div class="field-head">
+            <label class="field-label" for="r-brutto">Brutto</label>
+          </div>
+          <div class="field-control">
+            <input type="text" inputmode="decimal" id="r-brutto" value="100">
+            <button class="field-lock" type="button" data-rabatt-lock="brutto" title="Brutto fixieren" aria-label="Brutto fixieren" aria-pressed="false"></button>
+          </div>
+        </div>
+        <div class="field lockable-field" data-rabatt-field="rabatt">
+          <div class="field-head">
+            <label class="field-label" for="r-rabatt">Rabatt %</label>
+          </div>
+          <div class="field-control">
+            <input type="text" inputmode="decimal" id="r-rabatt" value="10">
+            <button class="field-lock" type="button" data-rabatt-lock="rabatt" title="Rabatt fixieren" aria-label="Rabatt fixieren" aria-pressed="false"></button>
+          </div>
+        </div>
+        <div class="field lockable-field" data-rabatt-field="kundennetto">
+          <div class="field-head">
+            <label class="field-label" for="r-kundennetto">Kundennetto</label>
+          </div>
+          <div class="field-control">
+            <input type="text" inputmode="decimal" id="r-kundennetto">
+            <button class="field-lock" type="button" data-rabatt-lock="kundennetto" title="Kundennetto fixieren" aria-label="Kundennetto fixieren" aria-pressed="false"></button>
+          </div>
+        </div>
+        <div class="field lockable-field" id="r-field-agenturnetto" data-rabatt-field="agenturnetto">
+          <div class="field-head">
+            <label class="field-label" for="r-agenturnetto">Agenturnetto</label>
+          </div>
+          <div class="field-control">
+            <input type="text" inputmode="decimal" id="r-agenturnetto">
+            <button class="field-lock" type="button" data-rabatt-lock="agenturnetto" title="Agenturnetto fixieren" aria-label="Agenturnetto fixieren" aria-pressed="false"></button>
+          </div>
+        </div>
+      </div>
+      <div class="bkdbe-grid">
+        <div class="option-pair">
+          <label class="toggle-line"><input type="checkbox" id="r-use-bk"><span></span>BK %</label>
+          <label class="small-field"><input type="text" inputmode="decimal" id="r-bk" value="0"></label>
+        </div>
+        <div class="option-pair">
+          <label class="toggle-line"><input type="checkbox" id="r-use-dbe"><span></span>DBE %</label>
+          <label class="small-field"><input type="text" inputmode="decimal" id="r-dbe" value="0"></label>
+        </div>
+        <div></div>
+        <div class="field lockable-field" id="r-field-netto" data-rabatt-field="netto">
+          <div class="field-head">
+            <label class="field-label" for="r-netto">Netto</label>
+          </div>
+          <div class="field-control">
+            <input type="text" inputmode="decimal" id="r-netto">
+            <button class="field-lock" type="button" data-rabatt-lock="netto" title="Netto fixieren" aria-label="Netto fixieren" aria-pressed="false"></button>
+          </div>
+        </div>
+      </div>
+      <div class="vat-row">
+        <div class="option-pair">
+          <label class="toggle-line"><input type="checkbox" id="r-use-mwst"><span></span>inkl. MwSt. %</label>
+          <label class="small-field"><input type="text" inputmode="decimal" id="r-mwst" value="8.1"></label>
+        </div>
+        <div class="field lockable-field vat-amount-field" id="r-field-mwst-amount" data-rabatt-field="mwst">
+          <div class="field-head">
+            <label class="field-label" for="r-mwst-amount">Netto inkl. MwSt.</label>
+          </div>
+          <div class="field-control">
+            <input type="text" inputmode="decimal" id="r-mwst-amount">
+            <button class="field-lock" type="button" data-rabatt-lock="mwst" title="Netto inkl. MwSt. fixieren" aria-label="Netto inkl. MwSt. fixieren" aria-pressed="false"></button>
+          </div>
+        </div>
+        <button class="text-button rabatt-reset" type="button" id="r-reset">Reset</button>
+      </div>
+      <hr>
+      <div class="section-title">Preis-Kette</div>
+      <div class="chain" id="r-chain"></div>
+      <div class="vat-summary" id="r-mwst-summary"></div>
+    </section>
+
+    <section class="panel" id="panel-hosting" aria-label="Hosting-Rechner">
+      <div class="section-title">Budget</div>
+      <div class="two-grid">
+        <label class="field">Gesamtbudget netto<input type="text" inputmode="decimal" id="h-budget" value="5000"></label>
+      </div>
+
+      <div id="h-price-inputs">
+        <div class="section-title">Standardpreise Werbemittel</div>
+        <div class="price-grid">
+          <div class="field lockable-field" data-hosting-field="brutto">
+            <div class="field-head">
+              <label class="field-label" for="h-brutto">Brutto TKP</label>
+            </div>
+            <div class="field-control">
+              <input type="text" inputmode="decimal" id="h-brutto" value="20">
+              <button class="field-lock" type="button" data-hosting-lock="brutto" title="Brutto TKP fixieren" aria-label="Brutto TKP fixieren" aria-pressed="false"></button>
+            </div>
+          </div>
+          <div class="field lockable-field" data-hosting-field="rabatt">
+            <div class="field-head">
+              <label class="field-label" for="h-rabatt">Rabatt %</label>
+            </div>
+            <div class="field-control">
+              <input type="text" inputmode="decimal" id="h-rabatt" value="10">
+              <button class="field-lock" type="button" data-hosting-lock="rabatt" title="Rabatt fixieren" aria-label="Rabatt fixieren" aria-pressed="false"></button>
+            </div>
+          </div>
+          <div class="field lockable-field" data-hosting-field="kundennetto">
+            <div class="field-head">
+              <label class="field-label" for="h-kundennetto">Kundennetto TKP</label>
+            </div>
+            <div class="field-control">
+              <input type="text" inputmode="decimal" id="h-kundennetto">
+              <button class="field-lock" type="button" data-hosting-lock="kundennetto" title="Kundennetto TKP fixieren" aria-label="Kundennetto TKP fixieren" aria-pressed="false"></button>
+            </div>
+          </div>
+          <div class="field lockable-field" id="h-field-agenturnetto" data-hosting-field="agenturnetto">
+            <div class="field-head">
+              <label class="field-label" for="h-agenturnetto">Agenturnetto TKP</label>
+            </div>
+            <div class="field-control">
+              <input type="text" inputmode="decimal" id="h-agenturnetto">
+              <button class="field-lock" type="button" data-hosting-lock="agenturnetto" title="Agenturnetto TKP fixieren" aria-label="Agenturnetto TKP fixieren" aria-pressed="false"></button>
+            </div>
+          </div>
+        </div>
+        <div class="bkdbe-grid">
+          <div class="option-pair">
+            <label class="toggle-line"><input type="checkbox" id="h-use-bk"><span></span>BK %</label>
+            <label class="small-field"><input type="text" inputmode="decimal" id="h-bk" value="0"></label>
+          </div>
+          <div class="option-pair">
+            <label class="toggle-line"><input type="checkbox" id="h-use-dbe"><span></span>DBE %</label>
+            <label class="small-field"><input type="text" inputmode="decimal" id="h-dbe" value="0"></label>
+          </div>
+          <div></div>
+          <div class="field lockable-field" id="h-field-netto" data-hosting-field="netto">
+            <div class="field-head">
+              <label class="field-label" for="h-netto">Netto TKP</label>
+            </div>
+            <div class="field-control">
+              <input type="text" inputmode="decimal" id="h-netto">
+              <button class="field-lock" type="button" data-hosting-lock="netto" title="Netto TKP fixieren" aria-label="Netto TKP fixieren" aria-pressed="false"></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr>
+      <div class="section-title">Hosting & Produktion</div>
+      <div class="two-grid">
+        <label class="field">Hosting TKP<input type="text" inputmode="decimal" id="h-host-tkp" value="1"></label>
+        <label class="field">Produktionskosten<input type="text" inputmode="decimal" id="h-prod" value="0"></label>
+      </div>
+
+      <hr>
+      <div class="section-title">Flights</div>
+      <div class="field-hint flight-help">Die Anteile beziehen sich auf Impressions. Aktiviere «Eigene Preise», wenn ein Flight einen anderen TKP oder andere Abzüge hat.</div>
+      <div id="flight-container"></div>
+      <div id="flight-sum"></div>
+      <button class="text-button" type="button" id="add-flight">+ Flight hinzufügen</button>
+
+      <hr>
+      <div class="section-title">Preis-Kette Standard</div>
+      <div class="chain" id="h-chain"></div>
+
+      <div class="section-title">Kennzahlen</div>
+      <div class="metrics-grid" id="h-metrics"></div>
+
+      <div class="section-title">Ergebnis Flights</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Typ</th>
+              <th>Flight</th>
+              <th class="num">Impressions</th>
+              <th class="num">TKP netto</th>
+              <th class="num">Betrag netto</th>
+            </tr>
+          </thead>
+          <tbody id="h-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-verteilung" aria-label="Verteilschlüssel">
+      <div class="section-title">Gesamtwert</div>
+      <div class="two-grid">
+        <label class="field">Gesamtwert<input type="text" inputmode="decimal" id="v-total" value="100000"></label>
+      </div>
+
+      <div class="section-title">Freitext eingeben</div>
+      <label class="field distribution-text-field">
+        Dimensionen
+        <span class="field-hint">Beispiel: Desktop 20% Mobile 80% / DE 70% FR 30% / Halfpage 60% Rectangle 40%</span>
+        <span class="distribution-parse-row">
+          <textarea id="v-text" rows="1" placeholder="Desktop 20% Mobile 80% / DE 70% FR 30% / Halfpage 60% Rectangle 40%"></textarea>
+          <button class="text-button" type="button" id="v-parse">Einlesen</button>
+        </span>
+      </label>
+      <div class="parse-status" id="v-parse-status"></div>
+
+      <div class="distribution-toggle-row">
+        <label class="toggle-line"><input type="checkbox" id="v-use-advanced"><span></span>Erweitert</label>
+        <button class="text-button distribution-reset" type="button" id="v-reset">Reset</button>
+      </div>
+
+      <div class="distribution-advanced" id="v-advanced-section">
+        <label class="field">Positionen aus
+          <select id="v-dependency-source"></select>
+        </label>
+        <label class="field">abhängig von
+          <select id="v-dependency-target"></select>
+        </label>
+        <div class="field-hint">Nur ausgewählte Kombinationen werden im Ergebnis berücksichtigt und danach wieder auf 100% normalisiert.</div>
+        <div id="v-dependency-matrix"></div>
+
+        <div class="dependency-extra-toggle">
+          <label class="toggle-line"><input type="checkbox" id="v-use-extra-dependency"><span></span>UND abhängig von</label>
+          <select id="v-extra-dependency-target"></select>
+        </div>
+        <div id="v-extra-dependency-matrix"></div>
+      </div>
+
+      <div class="section-title">Dimensionen</div>
+      <div id="v-dim-container"></div>
+      <button class="text-button" type="button" id="v-add-dim">+ Dimension hinzufügen</button>
+
+      <hr>
+      <div class="section-title">Ergebnis</div>
+      <div class="table-wrap" id="v-result"></div>
+    </section>
+    <footer class="field-hint">Version <code>3eec5f6</code></footer>
+  </main>
+
+  <script src="calculator-core.js"></script>
+  <script src="icons.js"></script>
+  <script src="calculator.js"></script>
+</body>
+</html>
