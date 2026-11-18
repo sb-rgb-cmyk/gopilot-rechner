@@ -191,37 +191,55 @@
     const netto = parseNumber(input.netto);
     const budget = parseNumber(input.budget);
     const hostTkp = parseNumber(input.hostTkp);
-    const production = parseNumber(input.production);
-    const budgetForImpressions = budget - production;
-    const flights = (input.flights || []).map(flight => ({
-      name: String(flight.name || ''),
-      pct: parseNumber(flight.pct),
-      netto: flight.netto == null || String(flight.netto).trim() === '' ? netto : parseNumber(flight.netto)
-    }));
+    const campaignProduction = parseNumber(input.production);
+    const flights = (input.flights || []).map(flight => {
+      const costs = flight.costs?.enabled ? flight.costs : null;
+      const flightHostTkp = String(costs?.hostTkp ?? '').trim();
+      return {
+        name: String(flight.name || ''),
+        pct: parseNumber(flight.pct),
+        netto: String(flight.netto ?? '').trim() === '' ? netto : parseNumber(flight.netto),
+        hostingTkp: flightHostTkp === '' ? hostTkp : parseNumber(flightHostTkp),
+        production: parseNumber(costs?.production),
+        ownCosts: Boolean(costs)
+      };
+    });
+    const usesFlightCosts = flights.some(flight => flight.ownCosts);
+    const production = campaignProduction + flights.reduce((sum, flight) => sum + flight.production, 0);
+    const budgetForImpressions = Math.max(0, budget - production);
+    const budgetShortfall = Math.max(0, production - budget);
     const mediaTkp = flights.length
       ? flights.reduce((sum, flight) => sum + flight.netto * flight.pct / 100, 0)
       : netto;
-    const effectiveTkp = mediaTkp + hostTkp;
+    const hostingTkp = usesFlightCosts
+      ? flights.reduce((sum, flight) => sum + flight.hostingTkp * flight.pct / 100, 0)
+      : hostTkp;
+    const effectiveTkp = mediaTkp + hostingTkp;
     const totalImpressions = effectiveTkp > 0 ? (budgetForImpressions / effectiveTkp) * 1000 : 0;
     const mediaAmount = (totalImpressions / 1000) * mediaTkp;
-    const hostingAmount = (totalImpressions / 1000) * hostTkp;
+    const hostingAmount = (totalImpressions / 1000) * hostingTkp;
     const total = mediaAmount + hostingAmount + production;
 
     return {
       budgetForImpressions,
+      budgetShortfall,
       mediaTkp,
+      hostingTkp,
       effectiveTkp,
       totalImpressions,
       mediaAmount,
       hostingAmount,
       production,
+      campaignProduction,
+      usesFlightCosts,
       total,
       flights: flights.map(flight => {
         const impressions = totalImpressions * (flight.pct / 100);
         return {
           ...flight,
           impressions,
-          amount: (impressions / 1000) * flight.netto
+          amount: (impressions / 1000) * flight.netto,
+          hostingAmount: (impressions / 1000) * flight.hostingTkp
         };
       })
     };

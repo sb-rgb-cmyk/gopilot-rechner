@@ -230,6 +230,7 @@
           name: String(flight.name ?? ''),
           pct: core.parseNumber(flight.pct),
           pricing: normalizeFlightPricing(flight.pricing),
+          costs: normalizeFlightCosts(flight.costs),
           documentPosition: normalizeDocumentPosition(flight.documentPosition)
         }));
     }
@@ -320,6 +321,7 @@
         name: flight.name,
         pct: flight.pct,
         pricing: normalizeFlightPricing(flight.pricing),
+        costs: normalizeFlightCosts(flight.costs),
         documentPosition: normalizeDocumentPosition(flight.documentPosition)
       })),
       hostingDocumentSource: normalizeDocumentSource(state.hostingDocumentSource),
@@ -468,6 +470,15 @@
     };
   }
 
+  function normalizeFlightCosts(costs) {
+    if (!costs || typeof costs !== 'object') return null;
+    return {
+      enabled: costs.enabled === true,
+      hostTkp: String(costs.hostTkp ?? ''),
+      production: String(costs.production ?? '')
+    };
+  }
+
   function normalizeDocumentSource(source) {
     if (!source || !/^\d{4,10}$/.test(source.campaignNumber || '') || !/^\d+$/.test(source.documentId || '')
       || !['confirmation', 'offer'].includes(source.documentType)) return null;
@@ -565,7 +576,7 @@
         setResolvedValues(prefix, flightChain);
         syncFlightPricingInputs(index);
       }
-      return { name: flight.name, pct: flight.pct, netto: flightChain.netto };
+      return { name: flight.name, pct: flight.pct, netto: flightChain.netto, costs: flight.costs };
     });
     const hosting = core.calculateHosting({
       budget: getValue('h-budget'),
@@ -937,9 +948,14 @@
   }
 
   function renderHostingMetrics(hosting) {
+    const budgetWarning = byId('h-budget-warning');
+    const shortfall = core.formatCurrency(hosting.budgetShortfall);
+    budgetWarning.hidden = shortfall === '0.00';
+    budgetWarning.textContent = budgetWarning.hidden ? '' : `Die Produktionskosten übersteigen das Budget um ${shortfall}.`;
+    const hostingLabel = hosting.usesFlightCosts ? 'Hosting-Misch-TKP' : 'Hosting-TKP';
     byId('h-metrics').innerHTML = [
       metric('Budget für Impressions', core.formatCurrency(hosting.budgetForImpressions), 'nach Abzug Produktion'),
-      metric('Effektiver TKP', core.formatCurrency(hosting.effectiveTkp), `WM-Misch-TKP ${core.formatCurrency(hosting.mediaTkp)} + Host ${core.formatCurrency(getValue('h-host-tkp'))}`),
+      metric('Effektiver TKP', core.formatCurrency(hosting.effectiveTkp), `WM-Misch-TKP ${core.formatCurrency(hosting.mediaTkp)} + ${hostingLabel} ${core.formatCurrency(hosting.hostingTkp)}`),
       metric('Gesamte Impressions', core.formatImpressions(hosting.totalImpressions)),
       metric('WM Betrag netto', core.formatCurrency(hosting.mediaAmount)),
       metric('Hosting Betrag', core.formatCurrency(hosting.hostingAmount)),
@@ -1025,36 +1041,20 @@
   }
 
   function renderHostingRows(hosting) {
-    const rows = hosting.flights.map(flight => {
-      const impressions = core.formatImpressions(flight.impressions);
-      const amount = core.formatCurrency(flight.amount);
-
-      return `<tr>
-        <td><span class="badge media">Werbemittel</span></td>
-        <td>${escapeHtml(flight.name)}</td>
-        <td class="num">${impressions} ${copyButton(impressions, 'copy-value-inline')}</td>
-        <td class="num">${core.formatCurrency(flight.netto)}</td>
-        <td class="num">${amount} ${copyButton(amount, 'copy-value-inline')}</td>
-      </tr>`;
-    });
-
-    const totalImpressions = core.formatImpressions(hosting.totalImpressions);
-    const hostingAmount = core.formatCurrency(hosting.hostingAmount);
-    rows.push(`<tr>
-      <td><span class="badge hosting">Hosting</span></td>
-      <td>-</td>
-      <td class="num">${totalImpressions} ${copyButton(totalImpressions, 'copy-value-inline')}</td>
-      <td class="num">${core.formatCurrency(getValue('h-host-tkp'))}</td>
-      <td class="num">${hostingAmount} ${copyButton(hostingAmount, 'copy-value-inline')}</td>
-    </tr>`);
-    const production = core.formatCurrency(hosting.production);
-    rows.push(`<tr>
-      <td><span class="badge production">Produktion</span></td>
-      <td>-</td>
-      <td class="num">-</td>
-      <td class="num">Fixpreis</td>
-      <td class="num">${production} ${copyButton(production, 'copy-value-inline')}</td>
-    </tr>`);
+    const rows = [];
+    for (const flight of hosting.flights) {
+      rows.push(hostingResultRow('media', 'Werbemittel', flight.name, flight.impressions, flight.netto, flight.amount));
+      if (hosting.usesFlightCosts) {
+        rows.push(hostingResultRow('hosting', 'Hosting', flight.name, flight.impressions, flight.hostingTkp, flight.hostingAmount));
+        if (flight.production) rows.push(hostingResultRow('production', 'Produktion', flight.name, null, null, flight.production));
+      }
+    }
+    if (!hosting.usesFlightCosts) {
+      rows.push(hostingResultRow('hosting', 'Hosting', '-', hosting.totalImpressions, hosting.hostingTkp, hosting.hostingAmount));
+    }
+    if (!hosting.usesFlightCosts || hosting.campaignProduction) {
+      rows.push(hostingResultRow('production', 'Produktion', 'Kampagne', null, null, hosting.campaignProduction));
+    }
     const total = core.formatCurrency(hosting.total);
     rows.push(`<tr class="total-row">
       <td colspan="4">Total</td>
@@ -1062,6 +1062,18 @@
     </tr>`);
 
     byId('h-tbody').innerHTML = rows.join('');
+  }
+
+  function hostingResultRow(kind, label, name, impressions, tkp, amount) {
+    const units = impressions === null ? null : core.formatImpressions(impressions);
+    const value = core.formatCurrency(amount);
+    return `<tr>
+      <td><span class="badge ${kind}">${label}</span></td>
+      <td>${escapeHtml(name)}</td>
+      <td class="num">${units === null ? '-' : `${units} ${copyButton(units, 'copy-value-inline')}`}</td>
+      <td class="num">${tkp === null ? 'Fixpreis' : core.formatCurrency(tkp)}</td>
+      <td class="num">${value} ${copyButton(value, 'copy-value-inline')}</td>
+    </tr>`;
   }
 
   function bindDistributionControls() {
@@ -1550,6 +1562,7 @@
       button.addEventListener('click', () => removeFlight(Number(button.dataset.index)));
     });
     state.flights.forEach((flight, index) => {
+      bindFlightCosts(flight, index);
       if (!flight.pricing?.enabled) return;
       const prefix = `hf-${index}`;
       const render = () => {
@@ -1560,6 +1573,25 @@
       bindPriceLockControls(prefix, render);
     });
     renderFlightSum();
+  }
+
+  function bindFlightCosts(flight, index) {
+    const prefix = `hf-${index}`;
+    const toggle = byId(`${prefix}-own-costs`);
+    toggle.addEventListener('change', () => {
+      flight.costs ??= normalizeFlightCosts({});
+      flight.costs.enabled = toggle.checked;
+      byId(`${prefix}-costs`).hidden = !toggle.checked;
+      renderHosting();
+    });
+    for (const field of ['hostTkp', 'production']) {
+      const input = byId(`${prefix}-cost-${field}`);
+      input.addEventListener('input', () => {
+        if (!flight.costs?.enabled) return;
+        flight.costs[field] = input.value;
+        renderHosting();
+      });
+    }
   }
 
   function createFlightMarkup(flight, index) {
@@ -1578,11 +1610,22 @@
       </div>
       <div class="flight-pricing-toolbar">
         <label class="toggle-line"><input class="flight-own-prices" type="checkbox" data-index="${index}"${flight.pricing?.enabled ? ' checked' : ''}><span></span>Eigene Preise</label>
+        <label class="toggle-line"><input id="hf-${index}-own-costs" type="checkbox" aria-controls="hf-${index}-costs"${flight.costs?.enabled ? ' checked' : ''}><span></span>Eigene Kosten</label>
         <span class="imp-hint" id="hf-${index}-netto-hint"></span>
         <span class="imp-hint" id="hf-${index}-impressions"></span>
       </div>
       ${flight.documentPosition ? `<div class="field-hint flight-document-source">Beleg: ${escapeHtml(flight.documentPosition.creative)} · ${escapeHtml([flight.documentPosition.start, flight.documentPosition.end].filter(Boolean).join(' – ') || 'Laufzeit offen')} · ${core.formatImpressions(flight.documentPosition.units)} gebuchte Imp.</div>` : ''}
       ${flight.pricing?.enabled ? createFlightPriceMarkup(flight.pricing, index) : ''}
+      <div class="flight-costs" id="hf-${index}-costs"${flight.costs?.enabled ? '' : ' hidden'}>
+        <div class="two-grid">
+          <label class="field">Hosting-TKP
+            <input id="hf-${index}-cost-hostTkp" type="text" inputmode="decimal" value="${escapeAttribute(flight.costs?.hostTkp)}" placeholder="Standard-TKP">
+          </label>
+          <label class="field">Zusätzliche Produktion
+            <input id="hf-${index}-cost-production" type="text" inputmode="decimal" value="${escapeAttribute(flight.costs?.production)}" placeholder="0">
+          </label>
+        </div>
+      </div>
     </div>`;
   }
 

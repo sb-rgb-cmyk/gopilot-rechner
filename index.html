@@ -171,13 +171,13 @@
       <hr>
       <div class="section-title">Hosting & Produktion</div>
       <div class="two-grid">
-        <label class="field">Hosting TKP<input type="text" inputmode="decimal" id="h-host-tkp" value="1"></label>
-        <label class="field">Produktionskosten<input type="text" inputmode="decimal" id="h-prod" value="0"></label>
+        <label class="field">Standard-Hosting-TKP<input type="text" inputmode="decimal" id="h-host-tkp" value="1"></label>
+        <label class="field">Gemeinsame Produktionskosten<input type="text" inputmode="decimal" id="h-prod" value="0"></label>
       </div>
 
       <hr>
       <div class="section-title">Flights</div>
-      <div class="field-hint flight-help">Die Anteile beziehen sich auf Impressions. Aktiviere «Eigene Preise», wenn ein Flight einen anderen TKP oder andere Abzüge hat.</div>
+      <div class="field-hint flight-help">Die Anteile beziehen sich auf Impressions. «Eigene Preise» ändert den Media-TKP. «Eigene Kosten» setzt den Hosting-TKP und die zusätzliche Produktion pro Flight.</div>
       <div id="flight-container"></div>
       <div id="flight-sum"></div>
       <button class="text-button" type="button" id="add-flight">+ Flight hinzufügen</button>
@@ -187,6 +187,7 @@
       <div class="chain" id="h-chain"></div>
 
       <div class="section-title">Kennzahlen</div>
+      <p class="hosting-budget-warning sum error" id="h-budget-warning" role="status" hidden></p>
       <div class="metrics-grid" id="h-metrics"></div>
 
       <div class="section-title">Ergebnis Flights</div>
@@ -253,7 +254,7 @@
       <div class="section-title">Ergebnis</div>
       <div class="table-wrap" id="v-result"></div>
     </section>
-    <footer class="field-hint">Version <code>a85655d</code></footer>
+    <footer class="field-hint">Version <code>044ce87</code></footer>
   </main>
 
   <script src="calculator-core.js"></script>
